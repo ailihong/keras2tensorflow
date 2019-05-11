@@ -33,10 +33,28 @@ import tensorflow as tf
 from keras.models import load_model
 from keras import backend as K
 
+#save keras model to json and weights
+#import json
+#
+## lets assume `model` is main model 
+#model_json = model.to_json()
+#with open("model_in_json.json", "w") as json_file:
+#    json.dump(model_json, json_file)
+#
+#model.save_weights("model_weights.h5")
 
+#load keras model from json and weights
+#from keras.models import load_model
+#from keras.models import model_from_json
+#import json
+#
+#with open('model_in_json.json','r') as f:
+#    model_json = json.load(f)
+#
+#model = model_from_json(model_json)
+#model.load_weights('model_weights.h5')
 
-
-def convertGraph( modelPath, outdir, numoutputs, prefix, name):
+def convertGraph( modelPath, jsonPath, outdir, numoutputs, prefix, name):
     '''
     Converts an HD5F file to a .pb file for use with Tensorflow.
 
@@ -55,8 +73,18 @@ def convertGraph( modelPath, outdir, numoutputs, prefix, name):
         os.mkdir(outdir)
 
     K.set_learning_phase(0)
-
-    net_model = load_model(modelPath)
+    
+    if jsonPath != None:
+        from keras.models import model_from_json
+        import json
+        with open(jsonPath,'r') as f:
+            model_dict = json.load(f)
+            model_str = json.dumps(model_dict)
+            net_model = model_from_json(model_str)
+        net_model.load_weights(modelPath)
+    else:
+        
+        net_model = load_model(modelPath)
 
     # Alias the outputs in the model - this sometimes makes them easier to access in TF
     pred = [None]*numoutputs
@@ -84,11 +112,13 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--model','-m', dest='model', required=True, help='REQUIRED: The HDF5 Keras model you wish to convert to .pb')
+    parser.add_argument('--model_json','-ms', dest='model_json', default=None, help='option: The Keras model definition you wish to convert to .pb')
     parser.add_argument('--numout','-n', type=int, dest='num_out', required=True, help='REQUIRED: The number of outputs in the model.')
     parser.add_argument('--outdir','-o', dest='outdir', required=False, default='./', help='The directory to place the output files - default("./")')
     parser.add_argument('--prefix','-p', dest='prefix', required=False, default='k2tfout', help='The prefix for the output aliasing - default("k2tfout")')
     parser.add_argument('--name', dest='name', required=False, default='output_graph.pb', help='The name of the resulting output graph - default("output_graph.pb")')
     args = parser.parse_args()
 
-    convertGraph( args.model, args.outdir, args.num_out, args.prefix, args.name )
+    convertGraph( args.model, args.model_json, args.outdir, args.num_out, args.prefix, args.name )
+
 
